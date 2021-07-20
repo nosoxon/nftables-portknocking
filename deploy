@@ -1,0 +1,30 @@
+#!/bin/bash
+
+HOST=$1
+
+m4 knocking.m4 > knocking.nft
+
+SSH="ssh -q $HOST"
+tmp="/tmp/nft-deploy"
+cmd_copy="mkdir -p $tmp/rules && tar xf - -C $tmp/rules"
+cmd_deploy="sed -n 'w $tmp/deploy' && sudo bash $tmp/deploy"
+
+tar cf - *.nft | $SSH "$cmd_copy"
+cat <<- EOF | $SSH "$cmd_deploy"
+	cd $tmp
+	cp -a rules test
+
+	echo "- testing rules"
+	sed -i 's|/etc/nftables|$tmp/test|g' test/core.nft
+
+	if nft -cf test/core.nft; then
+	    echo "- syntax ok, deploying"
+	    cp -f rules/*.nft /etc/nftables/
+	    nft -f /etc/nftables/core.nft && echo "- succesfully deployed"
+	fi
+
+	cd /
+	(rm -rf $tmp && echo "- cleanup complete") || echo "- cleanup failed"
+EOF
+
+exit 0

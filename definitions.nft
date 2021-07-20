@@ -1,0 +1,66 @@
+## core.laboutpost.net /etc/nftables/definitions.nft
+# see /etc/services for custom port definitons
+
+### firewall ports
+# router
+	define ports/router/tcp = {
+		ssh		# SSH (openssh)
+	}
+
+	define ports/router/udp = {
+		domain,		# DNS (unbound)
+		bootps		# DHCP (dhcpd)
+	}
+
+# cluster
+	define ports/cluster/tcp = {
+		nfs,            # NFS
+		iscsi-target,   # ISCSI server (target)
+		targetd,        # ISCSI controller (targetd)
+		4794            # postgres (unsecured)
+	}
+
+	define ports/cluster/udp = {
+		domain          # DNS (unbound)
+	}
+
+# conduit
+	# define ports/conduit/tcp = {}
+	define ports/conduit/udp = {
+		domain          # DNS (unbound)
+	}
+
+# kubernetes services
+	define ports/nginx/tcp = {
+		ssh, http, https, 8448,
+		19097, 14921, 16775, 30009    # davmail (IMAP, SMTP, CalDAV, LDAP)
+	}
+
+
+# file services
+	define ports/fileserver/tcp = {
+		microsoft-ds	# SMB/CIFS (samba)
+	}
+	# define ports/fileserver/udp = {}
+
+### interfaces
+	define if_secure     = "secure"         # vlan100 on local network
+	define if_wan        = "eno4"           # internet connection
+	define if_cluster    = "cluster"        # bridge interface for k8s cluster VMs
+
+### subnets
+	define net_secure     = 10.0.0.0/23     # primary EDPD network
+	define net_cluster    = 10.100.0.0/24   # private network for k8s cluster VMs
+
+### ip addresses
+	# local addresses
+	define ip/router     = 10.0.0.1         # default gw for EDPD and network services
+	define ip/service    = 10.0.0.5         # secondary address for k8s services
+	define ip/registry   = 10.0.0.6         # container registry for k8s cluster and local network
+	define ip/metrics    = 10.0.0.7
+	define ip/fileserver = 10.0.0.10        # secondary address for file services
+	define ip/cluster    = 10.100.0.1       # default gw for k8s cluster
+	define ip/conduit    = 10.64.0.2
+
+	# other addresses
+	define ip/nginx       = 10.100.0.50     # virtual ip for k8s ingress-nginx loadbalancer

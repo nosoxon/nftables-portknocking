@@ -1,0 +1,58 @@
+## core.laboutpost.net /etc/nftables/firewall.nft
+
+table ip firewall {
+	counter plaindns {}
+	counter input-dropped {}
+
+	chain outbound {
+		type filter hook output priority 0;
+		policy accept;
+
+		oif $if_wan udp dport domain counter name plaindns \
+			reject with icmp type admin-prohibited
+	}
+
+	chain inbound {
+		type filter hook input priority 0;
+		policy drop;
+
+		iif lo accept
+		ct state { established, related } accept
+
+		ip daddr vmap {
+			$ip/router     : jump ip_router,
+			$ip/service    : jump ip_service,
+			$ip/fileserver : jump ip_fileserver,
+			$ip/cluster    : jump ip_cluster,
+			$ip/conduit    : jump ip_conduit
+		}
+
+		counter name input-dropped
+	}
+
+	chain ip_router {
+		tcp dport $ports/router/tcp accept
+		udp dport $ports/router/udp accept
+		meta l4proto icmp accept
+	}
+
+	chain ip_fileserver {
+		tcp dport $ports/fileserver/tcp accept
+		# udp dport $ports/fileserver/udp accept
+		meta l4proto icmp accept
+	}
+
+	chain ip_cluster {
+		tcp dport $ports/cluster/tcp accept
+		udp dport $ports/cluster/udp accept
+	}
+
+	chain ip_conduit {
+		#tcp dport $ports/conduit/tcp accept
+		udp dport $ports/conduit/udp accept
+	}
+
+	chain ip_service {
+		tcp dport 4794 accept
+	}
+}

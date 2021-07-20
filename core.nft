@@ -1,0 +1,15 @@
+#!/usr/sbin/nft -f
+
+flush ruleset
+
+include "/etc/nftables/definitions.nft"
+include "/etc/nftables/firewall.nft"
+include "/etc/nftables/router.nft"
+include "/etc/nftables/knocking.m4"
+
+table ip6 block_ip6 {
+	chain block {
+		type filter hook prerouting priority -100;
+		policy drop;
+	}
+}

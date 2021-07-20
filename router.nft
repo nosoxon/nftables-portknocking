@@ -1,0 +1,54 @@
+## core.laboutpost.net /etc/nftables/router.nft
+
+table ip router {
+	counter plaindns {}
+
+	chain nat-prerouting {
+		type nat hook prerouting priority 0;
+
+		ip daddr $ip/service goto nat-service
+
+		ip daddr vmap {
+			$ip/registry : goto nat-registry,
+			$ip/metrics  : goto nat-metrics
+		}
+	}
+
+	# packets on loopback don't pass through routing hooks
+	chain nat-loopback {
+		type nat hook output priority 0;
+
+		oif lo ip daddr vmap {
+			$ip/service	: goto nat-service,
+			$ip/registry	: goto nat-registry,
+			$ip/metrics	: goto nat-metrics
+		}
+	}
+
+	chain nat-service {
+		tcp dport $ports/nginx/tcp dnat to $ip/nginx
+	}
+
+	chain nat-registry {
+		dnat ip addr . port to tcp dport map {
+			80  : 10.37.0.1 . 8080,
+			443 : 10.37.0.1 . 8443
+		}
+	}
+
+	chain nat-metrics {
+		tcp dport 80 dnat to 10.37.0.3:8080
+		tcp dport 443 dnat to 10.37.0.3:8443
+	}
+
+	chain nat-postrouting {
+		type nat hook postrouting priority 100;
+
+		oif $if_wan masquerade
+	}
+
+	chain filter-forward {
+		type filter hook forward priority 0;
+		policy accept;
+	}
+}
